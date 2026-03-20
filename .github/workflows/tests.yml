@@ -43,70 +43,73 @@ jobs:
       - name: Run Web Tests
         run: pytest tests/web --alluredir=allure-results-web
 
- mobile-tests:
-  runs-on: ubuntu-latest
 
-  steps:
-    - uses: actions/checkout@v4
+  mobile-tests:   # ✅ FIXED (aligned with api-tests & web-tests)
+    runs-on: ubuntu-latest
 
-    - uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+    steps:
+      - uses: actions/checkout@v4
 
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Install Dependencies
-      run: |
-        pip install -r requirements.txt
-        npm install -g appium@2.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-    # ✅ ADD THIS STEP (DOWNLOAD APK)
-    - name: Download APK
-      run: |
-        wget https://github.com/Esakkiappan-N/APIsample4/releases/download/v1/app-release-4-3-26.apk -O app.apk
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          npm install -g appium@2.19.0
 
-    - name: Run Emulator & Tests
-      uses: reactivecircus/android-emulator-runner@v2
-      with:
-        api-level: 29
-        target: default
-        arch: x86
-        profile: Nexus 6
+      - name: Set PYTHONPATH   # ✅ IMPORTANT FIX
+        run: echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
 
-        emulator-options: >-
-          -no-window
-          -no-audio
-          -no-boot-anim
-          -gpu off
-          -accel off
-          -no-snapshot
-          -wipe-data
+      - name: Download APK
+        run: |
+          wget https://github.com/Esakkiappan-N/APIsample4/releases/download/v1/app-release-4-3-26.apk -O app.apk
 
-        disable-animations: true
+      - name: Run Emulator & Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86
+          profile: Nexus 6
 
-        script: |
-          echo "Waiting for emulator..."
-          adb wait-for-device
+          emulator-options: >-
+            -no-window
+            -no-audio
+            -no-boot-anim
+            -gpu off
+            -accel off
+            -no-snapshot
+            -wipe-data
 
-          echo "Waiting for FULL boot..."
-          sleep 90
+          disable-animations: true
 
-          echo "Unlock screen..."
-          adb shell input keyevent 82
+          script: |
+            echo "Waiting for emulator..."
+            adb wait-for-device
 
-          echo "Installing APK..."
-          adb install -r app.apk
+            echo "Waiting for FULL boot..."
+            sleep 90
 
-          echo "Starting Appium..."
-          appium > appium.log 2>&1 &
-          sleep 25
+            echo "Unlock screen..."
+            adb shell input keyevent 82
 
-          echo "Running tests..."
-          pytest tests/mobile --alluredir=allure-results-mobile
+            echo "Installing APK..."
+            adb install -r app.apk
+
+            echo "Starting Appium..."
+            appium > appium.log 2>&1 &
+            sleep 25
+
+            echo "Running tests..."
+            pytest tests/mobile --alluredir=allure-results-mobile
