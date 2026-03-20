@@ -1,0 +1,108 @@
+name: Automation (API + Web + Mobile)
+
+on:
+  push:
+
+jobs:
+
+  api-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run API Tests
+        run: pytest tests/api --alluredir=allure-results-api
+
+
+  web-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright
+        run: playwright install --with-deps
+
+      - name: Run Web Tests
+        run: pytest tests/web --alluredir=allure-results-web
+
+
+  mobile-tests:
+    runs-on: ubuntu-latest   # ✅ FIXED INDENT
+
+    steps:                   # ✅ FIXED INDENT
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          npm install -g appium@2.19.0
+
+      - name: Run Emulator & Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86
+          profile: Nexus 6
+
+          emulator-options: >-
+            -no-window
+            -no-audio
+            -no-boot-anim
+            -gpu off
+            -accel off
+            -no-snapshot
+            -wipe-data
+
+          disable-animations: true
+
+          script: |
+            echo "Waiting for emulator..."
+            adb wait-for-device
+
+            echo "Waiting for FULL boot..."
+            sleep 90
+
+            echo "Unlock screen..."
+            adb shell input keyevent 82
+
+            echo "Installing APK..."
+            adb install -r app.apk || true
+
+            echo "Starting Appium..."
+            appium > appium.log 2>&1 &
+            sleep 25
+
+            echo "Running tests..."
+            pytest tests/mobile --alluredir=allure-results-mobile
